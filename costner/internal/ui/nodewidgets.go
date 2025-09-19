@@ -7,6 +7,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -230,3 +231,81 @@ func (w *NodeWidget) SetPosition(pos fyne.Position) {
 		w.onMove(w.node.ID(), pos)
 	}
 }
+
+// DraggableWidget wraps any widget to make it draggable
+type DraggableWidget struct {
+	widget.BaseWidget
+	content    fyne.CanvasObject
+	onMove     func(fyne.Position)
+	isDragging bool
+	dragStart  fyne.Position
+}
+
+func NewDraggableWidget(content fyne.CanvasObject, onMove func(fyne.Position)) *DraggableWidget {
+	d := &DraggableWidget{
+		content: content,
+		onMove:  onMove,
+	}
+	d.ExtendBaseWidget(d)
+	return d
+}
+
+func (d *DraggableWidget) CreateRenderer() fyne.WidgetRenderer {
+	return &draggableRenderer{
+		draggable: d,
+		content:   d.content,
+	}
+}
+
+func (d *DraggableWidget) MouseDown(event *desktop.MouseEvent) {
+	if event.Button == desktop.MouseButtonPrimary {
+		d.isDragging = true
+		d.dragStart = event.Position
+	}
+}
+
+func (d *DraggableWidget) MouseUp(event *desktop.MouseEvent) {
+	d.isDragging = false
+}
+
+func (d *DraggableWidget) MouseIn(event *desktop.MouseEvent) {}
+func (d *DraggableWidget) MouseOut()                        {}
+
+func (d *DraggableWidget) MouseMoved(event *desktop.MouseEvent) {
+	if d.isDragging {
+		// Calculate new position
+		deltaX := event.Position.X - d.dragStart.X
+		deltaY := event.Position.Y - d.dragStart.Y
+
+		currentPos := d.Position()
+		newPos := fyne.NewPos(currentPos.X+deltaX, currentPos.Y+deltaY)
+
+		d.Move(newPos)
+		if d.onMove != nil {
+			d.onMove(newPos)
+		}
+	}
+}
+
+type draggableRenderer struct {
+	draggable *DraggableWidget
+	content   fyne.CanvasObject
+}
+
+func (r *draggableRenderer) Layout(size fyne.Size) {
+	r.content.Resize(size)
+}
+
+func (r *draggableRenderer) MinSize() fyne.Size {
+	return r.content.MinSize()
+}
+
+func (r *draggableRenderer) Refresh() {
+	r.content.Refresh()
+}
+
+func (r *draggableRenderer) Objects() []fyne.CanvasObject {
+	return []fyne.CanvasObject{r.content}
+}
+
+func (r *draggableRenderer) Destroy() {}
