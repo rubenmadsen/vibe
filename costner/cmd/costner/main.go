@@ -37,11 +37,8 @@ func runGUI() {
 	}()
 
 	myApp := app.New()
-	myApp.SetMetadata(&fyne.AppMetadata{
-		ID:      "com.costner.app",
-		Name:    "Costner",
-		Version: "1.0.0",
-	})
+	myApp.Metadata().ID = "com.costner.app"
+	myApp.Metadata().Name = "Costner"
 
 	window := myApp.NewWindow("Costner - Graph-based API Testing")
 	window.Resize(fyne.NewSize(1200, 800))
