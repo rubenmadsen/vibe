@@ -15,12 +15,10 @@ import (
 
 type NodeWidget struct {
 	node         types.Node
-	container    *fyne.Container
+	container    *DraggableWidget
 	position     fyne.Position
 	onRun        func(nodeID string)
 	onMove       func(nodeID string, pos fyne.Position)
-	isDragging   bool
-	dragStart    fyne.Position
 	lastResult   *types.ExecutionResult
 }
 
@@ -70,10 +68,9 @@ func (w *NodeWidget) createWidget() {
 		outputs,
 	)
 
-	// Create main container with background
-	w.container = container.NewWithoutLayout(bg, content)
-	w.container.Move(w.position)
-	w.container.Resize(fyne.NewSize(250, 320))
+	// Create container with background and content
+	containerContent := container.NewWithoutLayout(bg, content)
+	containerContent.Resize(fyne.NewSize(250, 320))
 
 	// Size background to match container
 	bg.Resize(fyne.NewSize(250, 320))
@@ -82,8 +79,16 @@ func (w *NodeWidget) createWidget() {
 	content.Move(fyne.NewPos(5, 5))
 	content.Resize(fyne.NewSize(240, 310))
 
-	// Add drag functionality
-	w.addDragHandling()
+	// Create draggable container
+	w.container = NewDraggableWidget(containerContent, func(pos fyne.Position) {
+		w.position = pos
+		if w.onMove != nil {
+			w.onMove(w.node.ID(), pos)
+		}
+	})
+
+	w.container.Move(w.position)
+	w.container.Resize(fyne.NewSize(250, 320))
 }
 
 func (w *NodeWidget) createInputsSection() *fyne.Container {
@@ -192,7 +197,7 @@ func (w *NodeWidget) createOutputWidget(output types.NodeOutput) *fyne.Container
 	)
 }
 
-func (w *NodeWidget) Container() *fyne.Container {
+func (w *NodeWidget) Container() fyne.CanvasObject {
 	return w.container
 }
 
@@ -200,54 +205,6 @@ func (w *NodeWidget) Node() types.Node {
 	return w.node
 }
 
-func (w *NodeWidget) addDragHandling() {
-	// Add a move button for now since true drag-and-drop is complex in Fyne
-	moveBtn := widget.NewButton("📍 Move", func() {
-		w.showMoveDialog()
-	})
-
-	// Add the move button to the container
-	if content, ok := w.container.Objects[1].(*fyne.Container); ok {
-		if headerContainer, ok := content.Objects[0].(*fyne.Container); ok {
-			headerContainer.Add(moveBtn)
-		}
-	}
-}
-
-func (w *NodeWidget) showMoveDialog() {
-	xEntry := widget.NewEntry()
-	xEntry.SetText(fmt.Sprintf("%.0f", w.position.X))
-
-	yEntry := widget.NewEntry()
-	yEntry.SetText(fmt.Sprintf("%.0f", w.position.Y))
-
-	dialog := widget.NewModalPopUp(
-		container.NewVBox(
-			widget.NewLabel("Move Node"),
-			container.NewGridWithColumns(2,
-				widget.NewLabel("X:"), xEntry,
-				widget.NewLabel("Y:"), yEntry,
-			),
-		),
-		fyne.CurrentApp().Driver().AllWindows()[0].Canvas(),
-	)
-
-	moveBtn := widget.NewButton("Move", func() {
-		x := parseFloat(xEntry.Text, w.position.X)
-		y := parseFloat(yEntry.Text, w.position.Y)
-		newPos := fyne.NewPos(x, y)
-		w.SetPosition(newPos)
-		dialog.Hide()
-	})
-
-	cancelBtn := widget.NewButton("Cancel", func() {
-		dialog.Hide()
-	})
-
-	dialog.Content.(*fyne.Container).Add(container.NewHBox(moveBtn, cancelBtn))
-	dialog.Resize(fyne.NewSize(250, 150))
-	dialog.Show()
-}
 
 func parseFloat(s string, defaultVal float32) float32 {
 	if s == "" {
@@ -258,6 +215,7 @@ func parseFloat(s string, defaultVal float32) float32 {
 	}
 	return defaultVal
 }
+
 
 func (w *NodeWidget) UpdateResult(result types.ExecutionResult) {
 	w.lastResult = &result
