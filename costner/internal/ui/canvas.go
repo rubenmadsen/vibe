@@ -3,8 +3,6 @@ package ui
 import (
 	"context"
 	"fmt"
-	"math/rand"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
