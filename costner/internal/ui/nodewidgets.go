@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -200,8 +201,62 @@ func (w *NodeWidget) Node() types.Node {
 }
 
 func (w *NodeWidget) addDragHandling() {
-	// Simple drag simulation using button clicks
-	// In a real implementation, you'd use mouse events
+	// Add a move button for now since true drag-and-drop is complex in Fyne
+	moveBtn := widget.NewButton("📍 Move", func() {
+		w.showMoveDialog()
+	})
+
+	// Add the move button to the container
+	if content, ok := w.container.Objects[1].(*fyne.Container); ok {
+		if headerContainer, ok := content.Objects[0].(*fyne.Container); ok {
+			headerContainer.Add(moveBtn)
+		}
+	}
+}
+
+func (w *NodeWidget) showMoveDialog() {
+	xEntry := widget.NewEntry()
+	xEntry.SetText(fmt.Sprintf("%.0f", w.position.X))
+
+	yEntry := widget.NewEntry()
+	yEntry.SetText(fmt.Sprintf("%.0f", w.position.Y))
+
+	dialog := widget.NewModalPopUp(
+		container.NewVBox(
+			widget.NewLabel("Move Node"),
+			container.NewGridWithColumns(2,
+				widget.NewLabel("X:"), xEntry,
+				widget.NewLabel("Y:"), yEntry,
+			),
+		),
+		fyne.CurrentApp().Driver().AllWindows()[0].Canvas(),
+	)
+
+	moveBtn := widget.NewButton("Move", func() {
+		x := parseFloat(xEntry.Text, w.position.X)
+		y := parseFloat(yEntry.Text, w.position.Y)
+		newPos := fyne.NewPos(x, y)
+		w.SetPosition(newPos)
+		dialog.Hide()
+	})
+
+	cancelBtn := widget.NewButton("Cancel", func() {
+		dialog.Hide()
+	})
+
+	dialog.Content.(*fyne.Container).Add(container.NewHBox(moveBtn, cancelBtn))
+	dialog.Resize(fyne.NewSize(250, 150))
+	dialog.Show()
+}
+
+func parseFloat(s string, defaultVal float32) float32 {
+	if s == "" {
+		return defaultVal
+	}
+	if f, err := strconv.ParseFloat(s, 32); err == nil {
+		return float32(f)
+	}
+	return defaultVal
 }
 
 func (w *NodeWidget) UpdateResult(result types.ExecutionResult) {

@@ -157,10 +157,16 @@ func (c *Canvas) showError(title, message string) {
 		container.NewVBox(
 			widget.NewLabel(title),
 			widget.NewLabel(message),
-			widget.NewButton("OK", func() {}),
 		),
 		fyne.CurrentApp().Driver().AllWindows()[0].Canvas(),
 	)
+
+	okBtn := widget.NewButton("OK", func() {
+		dialog.Hide()
+	})
+
+	dialog.Content.(*fyne.Container).Add(okBtn)
+	dialog.Resize(fyne.NewSize(300, 150))
 	dialog.Show()
 }
 
@@ -181,10 +187,16 @@ func (c *Canvas) showExecutionResults(results []types.ExecutionResult) {
 		container.NewVBox(
 			widget.NewLabel("Execution Results"),
 			widget.NewLabel(content),
-			widget.NewButton("OK", func() {}),
 		),
 		fyne.CurrentApp().Driver().AllWindows()[0].Canvas(),
 	)
+
+	okBtn := widget.NewButton("OK", func() {
+		dialog.Hide()
+	})
+
+	dialog.Content.(*fyne.Container).Add(okBtn)
+	dialog.Resize(fyne.NewSize(400, 300))
 	dialog.Show()
 }
 
@@ -251,10 +263,16 @@ func (c *Canvas) showNodeResult(result types.ExecutionResult) {
 		container.NewVBox(
 			widget.NewLabel("Execution Result"),
 			widget.NewLabel(content),
-			widget.NewButton("OK", func() {}),
 		),
 		fyne.CurrentApp().Driver().AllWindows()[0].Canvas(),
 	)
+
+	okBtn := widget.NewButton("OK", func() {
+		dialog.Hide()
+	})
+
+	dialog.Content.(*fyne.Container).Add(okBtn)
+	dialog.Resize(fyne.NewSize(400, 300))
 	dialog.Show()
 }
 
