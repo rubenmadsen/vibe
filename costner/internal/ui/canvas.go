@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 
 	"fyne.io/fyne/v2"
@@ -13,10 +14,10 @@ import (
 )
 
 type Canvas struct {
-	container *container.Border
-	content   *fyne.Container
-	graph     *core.Graph
-	factory   *nodes.NodeFactory
+	container   *fyne.Container
+	content     *fyne.Container
+	graph       *core.Graph
+	factory     *nodes.NodeFactory
 	nodeWidgets map[string]*NodeWidget
 }
 
@@ -173,6 +174,6 @@ func (c *Canvas) showExecutionResults(results []types.ExecutionResult) {
 	dialog.Show()
 }
 
-func (c *Canvas) Container() *container.Border {
+func (c *Canvas) Container() *fyne.Container {
 	return c.container
 }
