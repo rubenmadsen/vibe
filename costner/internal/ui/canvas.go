@@ -1,0 +1,178 @@
+package ui
+
+import (
+	"fmt"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+
+	"costner/internal/core"
+	"costner/internal/nodes"
+	"costner/pkg/types"
+)
+
+type Canvas struct {
+	container *container.Border
+	content   *fyne.Container
+	graph     *core.Graph
+	factory   *nodes.NodeFactory
+	nodeWidgets map[string]*NodeWidget
+}
+
+func NewCanvas() *Canvas {
+	c := &Canvas{
+		graph:       core.NewGraph(),
+		factory:     nodes.NewNodeFactory(),
+		nodeWidgets: make(map[string]*NodeWidget),
+	}
+
+	c.content = container.NewWithoutLayout()
+
+	// Create toolbar
+	toolbar := c.createToolbar()
+
+	// Create main layout
+	c.container = container.NewBorder(
+		toolbar, // top
+		nil,     // bottom
+		nil,     // left
+		nil,     // right
+		container.NewScroll(c.content), // center
+	)
+
+	return c
+}
+
+func (c *Canvas) createToolbar() *fyne.Container {
+	addBtn := widget.NewButton("Add Node", func() {
+		c.showAddNodeDialog()
+	})
+
+	runBtn := widget.NewButton("Run", func() {
+		c.executeGraph()
+	})
+
+	saveBtn := widget.NewButton("Save", func() {
+		c.saveProject()
+	})
+
+	loadBtn := widget.NewButton("Load", func() {
+		c.loadProject()
+	})
+
+	return container.NewHBox(addBtn, runBtn, saveBtn, loadBtn)
+}
+
+func (c *Canvas) showAddNodeDialog() {
+	nodeTypes := c.factory.GetAvailableNodeTypes()
+
+	typeSelect := widget.NewSelect(nodeTypes, nil)
+	nameEntry := widget.NewEntry()
+	nameEntry.SetText("New Node")
+
+	content := container.NewVBox(
+		widget.NewLabel("Select node type:"),
+		typeSelect,
+		widget.NewLabel("Node name:"),
+		nameEntry,
+	)
+
+	dialog := widget.NewModalPopUp(content, fyne.CurrentApp().Driver().AllWindows()[0].Canvas())
+
+	createBtn := widget.NewButton("Create", func() {
+		if typeSelect.Selected == "" {
+			return
+		}
+
+		nodeID := fmt.Sprintf("node_%d", len(c.nodeWidgets)+1)
+		node, err := c.factory.CreateNode(typeSelect.Selected, nodeID)
+		if err != nil {
+			return
+		}
+
+		node.SetName(nameEntry.Text)
+		c.addNodeToCanvas(node, fyne.NewPos(100, 100))
+		dialog.Hide()
+	})
+
+	cancelBtn := widget.NewButton("Cancel", func() {
+		dialog.Hide()
+	})
+
+	buttons := container.NewHBox(createBtn, cancelBtn)
+	content.Add(buttons)
+
+	dialog.Resize(fyne.NewSize(300, 200))
+	dialog.Show()
+}
+
+func (c *Canvas) addNodeToCanvas(node types.Node, position fyne.Position) {
+	widget := NewNodeWidget(node, position)
+	c.nodeWidgets[node.ID()] = widget
+	c.graph.AddNode(node)
+	c.content.Add(widget.Container())
+	c.content.Refresh()
+}
+
+func (c *Canvas) executeGraph() {
+	executor := core.NewExecutor(c.graph)
+	results, err := executor.ExecuteGraph(context.Background())
+
+	if err != nil {
+		c.showError("Execution Error", err.Error())
+		return
+	}
+
+	c.showExecutionResults(results)
+}
+
+func (c *Canvas) saveProject() {
+	// TODO: Show file dialog and save project
+	fmt.Println("Save project functionality to be implemented")
+}
+
+func (c *Canvas) loadProject() {
+	// TODO: Show file dialog and load project
+	fmt.Println("Load project functionality to be implemented")
+}
+
+func (c *Canvas) showError(title, message string) {
+	dialog := widget.NewModalPopUp(
+		container.NewVBox(
+			widget.NewLabel(title),
+			widget.NewLabel(message),
+			widget.NewButton("OK", func() {}),
+		),
+		fyne.CurrentApp().Driver().AllWindows()[0].Canvas(),
+	)
+	dialog.Show()
+}
+
+func (c *Canvas) showExecutionResults(results []types.ExecutionResult) {
+	content := ""
+	for _, result := range results {
+		status := "✓"
+		if !result.Success {
+			status = "✗"
+		}
+		content += fmt.Sprintf("%s %s (%v)\n", status, result.NodeID, result.Duration)
+		if !result.Success {
+			content += fmt.Sprintf("  Error: %s\n", result.Error)
+		}
+	}
+
+	dialog := widget.NewModalPopUp(
+		container.NewVBox(
+			widget.NewLabel("Execution Results"),
+			widget.NewLabel(content),
+			widget.NewButton("OK", func() {}),
+		),
+		fyne.CurrentApp().Driver().AllWindows()[0].Canvas(),
+	)
+	dialog.Show()
+}
+
+func (c *Canvas) Container() *container.Border {
+	return c.container
+}

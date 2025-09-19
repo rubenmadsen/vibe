@@ -1,0 +1,45 @@
+{
+  "name": "Example API Test",
+  "version": "1.0.0",
+  "description": "A simple example testing httpbin.org",
+  "created_at": "2025-09-19T10:40:00Z",
+  "updated_at": "2025-09-19T10:40:00Z",
+  "nodes": [
+    {
+      "id": "env1",
+      "type": "env",
+      "name": "Environment Variables",
+      "position": {"x": 100, "y": 100},
+      "config": {},
+      "inputs": [
+        {"name": "load_os", "type": "bool", "required": false, "description": "Load OS environment variables", "value": true},
+        {"name": "env_file", "type": "string", "required": false, "description": "Path to .env file", "value": ""}
+      ],
+      "outputs": [
+        {"name": "variables", "type": "map", "description": "Environment variables"}
+      ]
+    },
+    {
+      "id": "req1",
+      "type": "request",
+      "name": "Test Request",
+      "position": {"x": 400, "y": 100},
+      "config": {},
+      "inputs": [
+        {"name": "url", "type": "string", "required": true, "description": "Request URL", "value": "https://httpbin.org/get"},
+        {"name": "method", "type": "string", "required": false, "description": "HTTP method", "value": "GET"},
+        {"name": "headers", "type": "map", "required": false, "description": "Request headers", "value": {}},
+        {"name": "body", "type": "string", "required": false, "description": "Request body", "value": ""},
+        {"name": "timeout", "type": "int", "required": false, "description": "Timeout in seconds", "value": 30}
+      ],
+      "outputs": [
+        {"name": "status_code", "type": "int", "description": "HTTP status code"},
+        {"name": "headers", "type": "map", "description": "Response headers"},
+        {"name": "body", "type": "string", "description": "Response body"},
+        {"name": "duration", "type": "duration", "description": "Request duration"}
+      ]
+    }
+  ],
+  "connections": [],
+  "variables": {}
+}

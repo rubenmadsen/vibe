@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go mod:*)",
+      "Bash(wget:*)",
+      "Bash(export PATH=$HOME/go/bin:$PATH)",
+      "Bash(go:*)",
+      "Bash(GOOS=windows GOARCH=amd64 go build -o costner-gui.exe ./cmd/costner)",
+      "Bash(GOOS=windows GOARCH=amd64 go build -tags cli -o costner-cli.exe ./cmd/costner)",
+      "Bash(./costner-cli:*)",
+      "Bash(GOOS=windows GOARCH=amd64 go build -tags debug -o costner-debug.exe ./cmd/costner)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
