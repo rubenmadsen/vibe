@@ -45,10 +45,7 @@ func runGUI() {
 	}()
 
 	myApp := app.New()
-	fmt.Println("App created, setting metadata...")
-
-	myApp.Metadata().ID = "com.costner.app"
-	myApp.Metadata().Name = "Costner"
+	fmt.Println("App created...")
 
 	fmt.Println("Creating window...")
 	window := myApp.NewWindow("Costner - Graph-based API Testing")
