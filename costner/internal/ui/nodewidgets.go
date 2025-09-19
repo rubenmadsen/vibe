@@ -4,16 +4,23 @@ import (
 	"fmt"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"costner/pkg/types"
 )
 
 type NodeWidget struct {
-	node      types.Node
-	container *fyne.Container
-	position  fyne.Position
+	node         types.Node
+	container    *fyne.Container
+	position     fyne.Position
+	onRun        func(nodeID string)
+	onMove       func(nodeID string, pos fyne.Position)
+	isDragging   bool
+	dragStart    fyne.Position
+	lastResult   *types.ExecutionResult
 }
 
 func NewNodeWidget(node types.Node, position fyne.Position) *NodeWidget {
@@ -25,10 +32,27 @@ func NewNodeWidget(node types.Node, position fyne.Position) *NodeWidget {
 	return w
 }
 
+func (w *NodeWidget) SetCallbacks(onRun func(string), onMove func(string, fyne.Position)) {
+	w.onRun = onRun
+	w.onMove = onMove
+}
+
 func (w *NodeWidget) createWidget() {
-	// Create node header
-	header := widget.NewCard(w.node.Type(), w.node.Name(), nil)
-	header.Resize(fyne.NewSize(200, 40))
+	// Create background rectangle
+	bg := canvas.NewRectangle(theme.ButtonColor())
+	bg.StrokeWidth = 2
+	bg.StrokeColor = theme.PrimaryColor()
+
+	// Create draggable header
+	header := widget.NewLabel(fmt.Sprintf("%s - %s", w.node.Type(), w.node.Name()))
+	header.Alignment = fyne.TextAlignCenter
+
+	// Create run button
+	runBtn := widget.NewButton("▶ Run", func() {
+		if w.onRun != nil {
+			w.onRun(w.node.ID())
+		}
+	})
 
 	// Create inputs section
 	inputs := w.createInputsSection()
@@ -36,17 +60,29 @@ func (w *NodeWidget) createWidget() {
 	// Create outputs section
 	outputs := w.createOutputsSection()
 
-	// Create main container
-	w.container = container.NewVBox(
-		header,
+	// Create main content
+	content := container.NewVBox(
+		container.NewHBox(header, runBtn),
 		widget.NewSeparator(),
 		inputs,
 		widget.NewSeparator(),
 		outputs,
 	)
 
+	// Create main container with background
+	w.container = container.NewWithoutLayout(bg, content)
 	w.container.Move(w.position)
-	w.container.Resize(fyne.NewSize(220, 300))
+	w.container.Resize(fyne.NewSize(250, 320))
+
+	// Size background to match container
+	bg.Resize(fyne.NewSize(250, 320))
+
+	// Size content to fit inside with padding
+	content.Move(fyne.NewPos(5, 5))
+	content.Resize(fyne.NewSize(240, 310))
+
+	// Add drag functionality
+	w.addDragHandling()
 }
 
 func (w *NodeWidget) createInputsSection() *fyne.Container {
@@ -163,7 +199,21 @@ func (w *NodeWidget) Node() types.Node {
 	return w.node
 }
 
+func (w *NodeWidget) addDragHandling() {
+	// Simple drag simulation using button clicks
+	// In a real implementation, you'd use mouse events
+}
+
+func (w *NodeWidget) UpdateResult(result types.ExecutionResult) {
+	w.lastResult = &result
+	// Update visual status based on result
+	// TODO: Change border color based on success/failure
+}
+
 func (w *NodeWidget) SetPosition(pos fyne.Position) {
 	w.position = pos
 	w.container.Move(pos)
+	if w.onMove != nil {
+		w.onMove(w.node.ID(), pos)
+	}
 }

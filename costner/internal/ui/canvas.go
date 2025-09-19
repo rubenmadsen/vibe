@@ -3,9 +3,13 @@ package ui
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"costner/internal/core"
@@ -14,21 +18,29 @@ import (
 )
 
 type Canvas struct {
-	container   *fyne.Container
-	content     *fyne.Container
-	graph       *core.Graph
-	factory     *nodes.NodeFactory
-	nodeWidgets map[string]*NodeWidget
+	container    *fyne.Container
+	content      *fyne.Container
+	background   *canvas.Rectangle
+	graph        *core.Graph
+	factory      *nodes.NodeFactory
+	nodeWidgets  map[string]*NodeWidget
+	nextPosition fyne.Position
 }
 
 func NewCanvas() *Canvas {
 	c := &Canvas{
-		graph:       core.NewGraph(),
-		factory:     nodes.NewNodeFactory(),
-		nodeWidgets: make(map[string]*NodeWidget),
+		graph:        core.NewGraph(),
+		factory:      nodes.NewNodeFactory(),
+		nodeWidgets:  make(map[string]*NodeWidget),
+		nextPosition: fyne.NewPos(50, 50),
 	}
 
+	// Create background
+	c.background = canvas.NewRectangle(theme.BackgroundColor())
+	c.background.Resize(fyne.NewSize(2000, 2000))
+
 	c.content = container.NewWithoutLayout()
+	c.content.Add(c.background) // Add background first
 
 	// Create toolbar
 	toolbar := c.createToolbar()
@@ -93,7 +105,7 @@ func (c *Canvas) showAddNodeDialog() {
 		}
 
 		node.SetName(nameEntry.Text)
-		c.addNodeToCanvas(node, fyne.NewPos(100, 100))
+		c.addNodeToCanvas(node, c.getNextPosition())
 		dialog.Hide()
 	})
 
@@ -110,6 +122,10 @@ func (c *Canvas) showAddNodeDialog() {
 
 func (c *Canvas) addNodeToCanvas(node types.Node, position fyne.Position) {
 	widget := NewNodeWidget(node, position)
+	widget.SetCallbacks(
+		func(nodeID string) { c.executeNode(nodeID) },
+		func(nodeID string, pos fyne.Position) { /* handle move */ },
+	)
 	c.nodeWidgets[node.ID()] = widget
 	c.graph.AddNode(node)
 	c.content.Add(widget.Container())
@@ -166,6 +182,76 @@ func (c *Canvas) showExecutionResults(results []types.ExecutionResult) {
 	dialog := widget.NewModalPopUp(
 		container.NewVBox(
 			widget.NewLabel("Execution Results"),
+			widget.NewLabel(content),
+			widget.NewButton("OK", func() {}),
+		),
+		fyne.CurrentApp().Driver().AllWindows()[0].Canvas(),
+	)
+	dialog.Show()
+}
+
+func (c *Canvas) getNextPosition() fyne.Position {
+	pos := c.nextPosition
+
+	// Move to next position (grid layout)
+	c.nextPosition.X += 250
+	if c.nextPosition.X > 800 {
+		c.nextPosition.X = 50
+		c.nextPosition.Y += 200
+	}
+
+	return pos
+}
+
+func (c *Canvas) executeNode(nodeID string) {
+	executor := core.NewExecutor(c.graph)
+
+	// Get dependencies and execute them first
+	deps := c.graph.GetDependencies(nodeID)
+	for _, depID := range deps {
+		if _, err := executor.ExecuteNode(context.Background(), depID); err != nil {
+			c.showError("Dependency Error", fmt.Sprintf("Failed to execute dependency %s: %v", depID, err))
+			return
+		}
+	}
+
+	// Execute the target node
+	result, err := executor.ExecuteNode(context.Background(), nodeID)
+	if err != nil {
+		c.showError("Execution Error", err.Error())
+		return
+	}
+
+	// Update node widget with result
+	if widget, exists := c.nodeWidgets[nodeID]; exists {
+		widget.UpdateResult(result)
+	}
+
+	// Show result
+	c.showNodeResult(result)
+}
+
+func (c *Canvas) showNodeResult(result types.ExecutionResult) {
+	status := "Success"
+	if !result.Success {
+		status = "Failed"
+	}
+
+	content := fmt.Sprintf("Node: %s\nStatus: %s\nDuration: %v",
+		result.NodeID, status, result.Duration)
+
+	if !result.Success {
+		content += fmt.Sprintf("\nError: %s", result.Error)
+	} else {
+		content += "\nOutputs:\n"
+		for key, value := range result.Outputs {
+			content += fmt.Sprintf("  %s: %v\n", key, value)
+		}
+	}
+
+	dialog := widget.NewModalPopUp(
+		container.NewVBox(
+			widget.NewLabel("Execution Result"),
 			widget.NewLabel(content),
 			widget.NewButton("OK", func() {}),
 		),
